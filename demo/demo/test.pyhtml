@@ -1,12 +1,35 @@
-<?py
-    html_text = str(html).strip("<").rstrip(">")
+<!DOCTYPE html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<head>
+    <meta charset="utf-8">
+    <title>测试代码块</title>
+</head>
 
-    print(
-        f"<p>html: {html_text}</p>",
-        f"<p>request_header: {request_header}</p>",
-        f"<p>request_path: {request_path}</p>",
-        f"<p>url: {url}</p>",
-        f"<p>post: {post}</p>",
-        f"<p>get: {get}</p>",
-    ) 
+<!-- 标准代码块 -->
+<?py
+    p_style = "color:blue;text-align:center"
+    p_text = "Hi PyHP!!!"
 ?>
+
+<body>
+    <!-- 行代码块 -->
+
+    <!-- 变量输出 动态样式 动态內容 -->
+    <p style="<?py print(p_style) ?>"><?py print(p_text) ?></p>
+
+    <!-- 单行输出多个元素 -->
+    <?py print(f'<p style="{p_style}">print ps {p_text}</p>\n'*10) ?>
+    
+    <hr>
+
+    <!-- 元素中的代码块 -->
+
+    <div>
+        <!-- 向元素中输出多个元素 -->
+        <?py
+        for i in range(0, 10):
+            print(f'<p style="{p_style}">for in {i} {p_text}</p>\n')
+        ?>
+    </div>
+</body>

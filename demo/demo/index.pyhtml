@@ -1,7 +1,6 @@
 <?py
     from .pyhp import __version__
     
-	# 这里的 print 将向页面输入
     print(f"<h2>PyHP v{__version__}</h2>")
 ?>
 
