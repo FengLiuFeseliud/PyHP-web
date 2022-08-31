@@ -18,7 +18,7 @@
     <?py print(f"<h2>{time}</h2>") ?>
     <div>
         <h3> GET </h3>
-        <form action="/test.pyhtml" method="GET">
+        <form action="" method="GET">
         First name: <input type="text" name="firstName"><br>
         Last name: <input type="text" name="lastName"><br>
         <input type="submit" value="提交">
@@ -26,7 +26,7 @@
     </div>
     <div>
         <h3> POST </h3>
-        <form action="/test.pyhtml" method="POST">
+        <form action="" method="POST">
         First name: <input type="text" name="firstName"><br>
         Last name: <input type="text" name="lastName"><br>
         <input type="submit" value="提交">
@@ -182,3 +182,32 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 ?>
 ```
 
+## Json Api
+
+```python
+<?py
+    from .pyhp import Content_Type, __version__
+    import json
+
+    # 设置请求头 Content-Type 为 json
+    html.header = {
+        "Content-Type": Content_Type["json"],
+    }
+
+    data = {
+        "code": 200, 
+        "msg": "OK",
+        "data": {   
+            "request_path": request_path,
+            "request_header": request_header,
+            "url": url,
+            "get": get,
+            "post": post,
+            "version": __version__
+        }
+    }
+
+    # json.dumps json 序列化后输出至页面
+    print(json.dumps(data))
+?>
+```

@@ -353,8 +353,15 @@ class PyHP_Server:
             logging.debug(body)
             writer.write(body)
         except Exception:
+            request = {}
             writer.write(self._get_error_response_body(encoding=self._encoding))
             code = 500
+        
+        await writer.drain()
+        writer.close()
+
+        if not request:
+            return
 
         logging.info('- - %s - "%s %s" %s - %s' % (
             f"{self._host}:{self._port}",
@@ -363,9 +370,6 @@ class PyHP_Server:
             code,
             request["request_path"]["path"],
         ))
-
-        await writer.drain()
-        writer.close()
 
     async def start(self):
         """启动服务器"""
@@ -378,7 +382,10 @@ class PyHP_Server:
         addr = self._server.sockets[0].getsockname()
         file_name = sys.argv[0].rsplit("/", maxsplit=1)[-1]
         print(
-            f"\n * Serving PyPH Server '{file_name}' on ip: {addr[0]} port: {addr[1]}\n\n",
+            f"\n * Serving PyPH {__version__} Server '{file_name}' on ip: {addr[0]} port: {addr[1]}\n\n",
+            f"* Website Root Directory '{self._web_path}'\n\n",
+            f"* Web Index Page '{self._web_index}' Encoding {self._encoding}\n\n",
+            "* Logging DEBUG %s \n\n" % (logging.DEBUG == logging.root.level),
             f'* Running on http://{addr[0]}:{addr[1]} (Press CTRL+C to quit)\n'
         )
 

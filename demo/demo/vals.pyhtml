@@ -7,7 +7,7 @@
     <?py print(f"<h2>{time}</h2>") ?>
     <div>
         <h3> GET </h3>
-        <form action="/test.pyhtml" method="GET">
+        <form action="" method="GET">
         First name: <input type="text" name="firstName"><br>
         Last name: <input type="text" name="lastName"><br>
         <input type="submit" value="提交">
@@ -15,7 +15,7 @@
     </div>
     <div>
         <h3> POST </h3>
-        <form action="/test.pyhtml" method="POST">
+        <form action="" method="POST">
         First name: <input type="text" name="firstName"><br>
         Last name: <input type="text" name="lastName"><br>
         <input type="submit" value="提交">
