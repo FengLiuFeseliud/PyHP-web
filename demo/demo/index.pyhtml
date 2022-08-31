@@ -1,0 +1,7 @@
+<?py
+    from .pyhp import __version__
+
+    html.print(f"<h2>PyHP v{__version__}</h2>")
+?>
+
+<h3>Run in Server</h3>

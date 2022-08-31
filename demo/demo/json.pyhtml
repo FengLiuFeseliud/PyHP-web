@@ -1,0 +1,13 @@
+<?py
+    from .pyhp import Content_Type
+    import json
+
+    html.header = {
+        "Content-Type": Content_Type["json"],
+        "Cache-Control": "max-age=30"
+    }
+    
+    print(
+        json.dumps({"code": 200, "msg": "OK","data": {"test": Content_Type}})
+        )
+?>

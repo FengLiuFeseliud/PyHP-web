@@ -1,0 +1,49 @@
+<?py 
+    import time 
+
+    time = time.asctime(time.localtime(time.time()))
+?>
+<div>
+    <?py print(f"<h2>{time}</h2>") ?>
+    <form id="upload-form" action="upload.pyhtml" method="post" enctype="multipart/form-data" >
+        <input type="file" id="upload" name="upload" />
+　　　　  <input type="submit" value="Upload" />
+    </form>
+
+    <div>
+        <h3> GET </h3>
+        <form action="/test.pyhtml" method="GET">
+        First name: <input type="text" name="firstName"><br>
+        Last name: <input type="text" name="lastName"><br>
+        <input type="submit" value="提交">
+        </form>
+    </div>
+    <div>
+        <h3> POST </h3>
+        <form action="/test.pyhtml" method="POST">
+        First name: <input type="text" name="firstName"><br>
+        Last name: <input type="text" name="lastName"><br>
+        <input type="submit" value="提交">
+        </form>
+    </div>
+</div>
+
+<?py
+    from .pyhp import __version__
+
+    html.header = {
+        "Cache-Control": "max-age=30"
+    }
+
+    print(
+        "<p>http_version: %s</p>" % request_path["http_version"],
+        "<p>request_mode: %s</p>" % request_path["mode"],
+        "<p>request_path: %s</p>" % request_path["path"],
+        "<p>url: %s</p>" % url,
+        f"<p>get: {get}</p>",
+        f"<p>post: {post}</p>",
+        f"<p>request_header: {request_header}</p>",
+        f"<p>request_data: {request_data}</p>",
+        f"<p>PyHP version {__version__}</p>"
+    ) 
+?>
