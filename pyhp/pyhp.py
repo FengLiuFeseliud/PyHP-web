@@ -15,7 +15,7 @@ __version__ = "1.0.0"
 
 
 # 代码块正则匹配
-Py_Code_Pattern = re.compile(r"<\?py[\s\S]*?>\n|<\?py[\s\S]*\?>")
+Py_Code_Pattern = re.compile(r"<\?py[\w\W]+?\?>")
 
 
 # 响应头
@@ -350,6 +350,7 @@ class PyHP_Server:
             request = self._set_request(await reader.read(2000))
             code, body = await self._get_connected_body(request)
 
+            logging.debug(body)
             writer.write(body)
         except Exception:
             writer.write(self._get_error_response_body(encoding=self._encoding))

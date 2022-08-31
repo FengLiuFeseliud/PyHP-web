@@ -5,11 +5,6 @@
 ?>
 <div>
     <?py print(f"<h2>{time}</h2>") ?>
-    <form id="upload-form" action="upload.pyhtml" method="post" enctype="multipart/form-data" >
-        <input type="file" id="upload" name="upload" />
-　　　　  <input type="submit" value="Upload" />
-    </form>
-
     <div>
         <h3> GET </h3>
         <form action="/test.pyhtml" method="GET">

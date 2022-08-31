@@ -1,0 +1,12 @@
+<?py
+    html_text = str(html).strip("<").rstrip(">")
+
+    print(
+        f"<p>html: {html_text}</p>",
+        f"<p>request_header: {request_header}</p>",
+        f"<p>request_path: {request_path}</p>",
+        f"<p>url: {url}</p>",
+        f"<p>post: {post}</p>",
+        f"<p>get: {get}</p>",
+    ) 
+?>
