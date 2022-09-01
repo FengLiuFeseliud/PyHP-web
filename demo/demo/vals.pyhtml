@@ -26,10 +26,6 @@
 <?py
     from .pyhp import __version__
 
-    html.header = {
-        "Cache-Control": "max-age=30"
-    }
-
     print(
         "<p>http_version: %s</p>" % request_path["http_version"],
         "<p>request_mode: %s</p>" % request_path["mode"],
@@ -37,6 +33,7 @@
         "<p>url: %s</p>" % url,
         f"<p>get: {get}</p>",
         f"<p>post: {post}</p>",
+        f"<p>cookie: {cookie}</p>",
         f"<p>request_header: {request_header}</p>",
         f"<p>request_data: {request_data}</p>",
         f"<p>PyHP version {__version__}</p>"

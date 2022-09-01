@@ -1,0 +1,22 @@
+<?py
+    from pyhp.tools import full_date
+    
+    if not cookie:
+        # max_age Cookie 有效时长 (秒)
+        # max_age -1 或者 0 Cookie 立刻过期
+        set_cookies({
+            "text": "30秒后过期!!!",
+            "set-time": full_date(),
+        }, max_age=30)
+        print("<h1>没有 Cookie 设置 Cookie</h1>")
+
+    elif "nocookie" in get:
+        # 当 get 数据有 nocookie 项时 (cookie.pyhtml?nocookie=), 删除所有 cookie 
+        # set_cookies max_age 默认 -1 立刻过期
+        set_cookies(cookie)
+        print("<h1>删除所有 cookie </h1>")
+
+    else:
+        print("<h1>cookie str: %s</h1>" % request_header["Cookie"])
+        print("<h1>cookie: %s</h1>" % cookie)
+?>

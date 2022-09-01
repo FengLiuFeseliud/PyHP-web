@@ -44,6 +44,7 @@
         "<p>url: %s</p>" % url,
         f"<p>get: {get}</p>",
         f"<p>post: {post}</p>",
+        f"<p>cookie: {cookie}</p>",
         f"<p>request_header: {request_header}</p>",
         f"<p>request_data: {request_data}</p>",
         f"<p>PyHP version {__version__}</p>"
@@ -164,6 +165,8 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 > **`post`**： POST 数据
 >
 > **`get`**： GET 数据
+>
+> **`cookie`**: Cookie 数据
 
 输出测试
 
@@ -178,7 +181,37 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
         f"<p>url: {url}</p>",
         f"<p>post: {post}</p>",
         f"<p>get: {get}</p>",
+        f"<p>cookie: {cookie}</p>"
     ) 
+?>
+```
+
+## 使用 Cookie
+
+使用 set_cookie 设置 cookie, set_cookie max_age 默认 -1 立刻过期
+
+```python
+<?py
+    from pyhp.tools import full_date
+    
+    if not cookie:
+        # max_age Cookie 有效时长 (秒)
+        # max_age -1 或者 0 Cookie 立刻过期
+        set_cookies({
+            "text": "30秒后过期!!!",
+            "set-time": full_date(),
+        }, max_age=30)
+        print("<h1>没有 Cookie 设置 Cookie</h1>")
+
+    elif "nocookie" in get:
+        # 当 get 数据有 nocookie 项时 (cookie.pyhtml?nocookie=), 删除所有 cookie 
+        # set_cookies max_age 默认 -1 立刻过期
+        set_cookies(cookie)
+        print("<h1>删除所有 cookie </h1>")
+
+    else:
+        print("<h1>cookie str: %s</h1>" % request_header["Cookie"])
+        print("<h1>cookie: %s</h1>" % cookie)
 ?>
 ```
 

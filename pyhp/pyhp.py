@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from time import strftime, localtime
+from pyhp.tools import full_date
 import aiofiles
 from traceback import extract_tb, format_list
 from typing import Any, Union
@@ -63,9 +63,10 @@ def _get_response_header(
     header: dict[str, Any], 
     response: str, 
     html_code: Union[str, bytes], 
-    encoding: str
+    encoding: str,
+    cookies: str = None
 ) -> bytes:
-    header["Date"] = strftime("%a, %d %b %Y %H:%M:%S %Z", localtime())
+    header["Date"] = full_date()
     if "charset" not in header["Content-Type"]:
         header["Content-Type"] += f";charset={encoding}"
     
@@ -76,6 +77,9 @@ def _get_response_header(
     for item in header.items():
         key, val = item
         header_str += f"{key}: {val}\n"
+
+    if cookies:
+        header_str += f"{cookies}\n"
 
     return header_str.encode(encoding)
 
@@ -91,6 +95,7 @@ class Py_Html:
         self.__ehco_list: list[str] = []
         self.__html = html_data
         self.__encoding = encoding
+        self.__set_cookies = ""
         self.__response: dict[str, Union[str, int]] = {
             "http_version": "1.1",
             "code": 200,
@@ -110,6 +115,7 @@ class Py_Html:
         # 设置内置方法
         vals["html"] = self
         vals["print"] = self.print
+        vals["set_cookies"] = self.set_cookies
         vals["__name__"] = __name__
         # 存储所有已经运行代码块的变量
         run_py_vals: dict[str, Any] = {}
@@ -150,6 +156,32 @@ class Py_Html:
         """保存数据, 在代码块运行完成后替换为保存数据"""
         self.__ehco_list.append("\n".join(str(arg) for arg in args))
 
+    def set_cookies(
+        self, 
+        cookies: dict[str, Any], 
+        max_age: Union[str, int] = None, 
+        expires: str = None, 
+        path: str = "/"
+    ):
+        """设置 cookie"""
+        if not cookies:
+            return
+        
+        if max_age is None and expires is None:
+            max_age = -1
+        
+        for key, val in cookies.items():
+            cookie = f"{key}={val}; Path={path};"
+
+            if not max_age is None:
+                cookie = f"{cookie} Max-Age={max_age};"
+            elif not expires is None:
+                cookie = f"{cookie} Expires={expires};"
+
+            self.__set_cookies = f"{self.__set_cookies}Set-Cookie: {cookie}\n"
+        
+        self.__set_cookies.rstrip("\n")
+
     @property
     def html(self) -> Union[str, bytes]:
         return self.__html.encode(self.__encoding)
@@ -160,7 +192,8 @@ class Py_Html:
             header=self.__header,
             response=self.response,
             html_code=self.html,
-            encoding=self.__encoding
+            encoding=self.__encoding,
+            cookies=self.__set_cookies
         )
 
     @header.setter
@@ -181,6 +214,9 @@ class Py_Html:
 
     def get_response(self):
         return self.__response
+
+    def get_header(self):
+        return self.__header
 
     def get_response_body(self):
         return b"%b\n%b" % (self.header, self.html)
@@ -271,26 +307,36 @@ class PyHP_Server:
         }
 
         request_path = request_data[0].split(" ")
+        # 分解 get 数据
         url_data = request_path[1].rsplit("?", maxsplit=1)
-        if len(url_data) == 2:
+        if len(url_data) == 2 and url_data[-1]:
             for data_item in url_data[-1].split("&"):
                 item = parse.unquote(data_item).split("=")
                 data["GET"][item[0]] = item[1]
 
         try:
+            # 分解请求头数据
             for text in request_data[1:]:
                 key = text.split(": ")
                 request[key[0]] = key[1]
 
         except IndexError:
+            # 分解 post 数据
             if request_data[-1] != "":
                 for data_item in parse.unquote(request_data[-1].replace("+", " ")).split("&"):
                     item = data_item.split("=")
-                    data[request_path[0]][item[0]] = item[1]
+                    data["POST"][item[0]] = item[1]
 
         # if "multipart/form-data" in request["Content-Type"]:
         #     web_kit: str = request["Content-Type"].split("; boundary=", maxsplit=1)[-1]
         #     print(request_body.split())
+        
+        cookie = {}
+        # 分解 cookie 数据
+        if "Cookie" in request:
+            for cookie_key in request["Cookie"].split("; "):
+                cookie_key = cookie_key.split("=")
+                cookie[cookie_key[0]] = cookie_key[1]
 
         return {
             "request_path": {
@@ -299,7 +345,8 @@ class PyHP_Server:
                 "http_version": request_path[2],
             },
             "request_header": request,
-            "request_data": data
+            "request_data": data,
+            "cookie": cookie
         }
     
     async def _get_connected_body(self, request: dict[str, dict[str, Any]]):
@@ -326,7 +373,8 @@ class PyHP_Server:
                         "request_data": request["request_data"],
                         "url": f"'{path}'",
                         "post": request["request_data"]["POST"],
-                        "get": request["request_data"]["GET"]
+                        "get": request["request_data"]["GET"],
+                        "cookie": request["cookie"]
                     })
 
                     body = pyhtml.get_response_body()
