@@ -188,23 +188,38 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 
 ## 使用 Cookie
 
-使用 set_cookie 设置 cookie, set_cookie max_age 默认 -1 立刻过期
+使用 set_cookie 设置 cookie, set_cookie max_age 默认 -1 立刻过期, max_age 为 None 时于客户端被关闭时失效
 
 ```python
 <?py
     from pyhp.tools import full_date
     
     if not cookie:
-        # max_age Cookie 有效时长 (秒)
-        # max_age -1 或者 0 Cookie 立刻过期
-        set_cookies({
-            "text": "30秒后过期!!!",
-            "set-time": full_date(),
-        }, max_age=30)
-        print("<h1>没有 Cookie 设置 Cookie</h1>")
+        """
+        当 get 数据有 nomaxage 项时 (cookie.pyhtml?nomaxage=)
+        这个 Cookie 将在浏览器被关闭时失效
+        """
+        if not "nomaxage" in get:
+            # max_age Cookie 有效时长 (秒)
+            # max_age -1 或者 0 Cookie 立刻过期
+            set_cookies({
+                "text": "30秒后过期!!!",
+                "set-time": full_date(),
+            }, max_age=30)
+            print("<h1>没有 Cookie 设置 Cookie</h1>")
+        else:
+            # max_age 为 None 时于客户端被关闭时失效
+            set_cookies({
+                "text": "浏览器被关闭时失效!!!",
+                "set-time": full_date(),
+            }, max_age=None)
+            print("<h1>没有 Cookie 设置 Cookie, 这个 Cookie 将在浏览器被关闭时失效</h1>")
 
     elif "nocookie" in get:
-        # 当 get 数据有 nocookie 项时 (cookie.pyhtml?nocookie=), 删除所有 cookie 
+        """
+        当 get 数据有 nocookie 项时 (cookie.pyhtml?nocookie=)
+        删除所有 cookie
+        """ 
         # set_cookies max_age 默认 -1 立刻过期
         set_cookies(cookie)
         print("<h1>删除所有 cookie </h1>")

@@ -3,10 +3,11 @@ import logging
 import os
 import re
 import sys
+from time import time
 from pyhp.tools import full_date
 import aiofiles
 from traceback import extract_tb, format_list
-from typing import Any, Union
+from typing import Any, Optional, Union
 from threading import Thread
 from urllib import parse
 
@@ -159,26 +160,25 @@ class Py_Html:
     def set_cookies(
         self, 
         cookies: dict[str, Any], 
-        max_age: Union[str, int] = None, 
-        expires: str = None, 
+        max_age: Optional[int] = -1, 
         path: str = "/"
     ):
-        """设置 cookie"""
+        """设置 cookie, max_age 如果为 None 于客户端被关闭时失效
+        大部分浏览器被关闭时 max_age 为 None 的 cookie 才会失效"""
         if not cookies:
             return
-        
-        if max_age is None and expires is None:
-            max_age = -1
+
+        expires = ""
+        if not max_age is None:
+            if max_age > 0:
+                expires = full_date(time() + max_age)
+
+            cookie_ = "Set-Cookie: {key}={val}%s" % f"; Path={path}; Expires={expires}; Max-Age={max_age};\n"
+        else:
+            cookie_ = "Set-Cookie: {key}={val}%s" % f"; Path={path}; Expires={expires};\n"
         
         for key, val in cookies.items():
-            cookie = f"{key}={val}; Path={path};"
-
-            if not max_age is None:
-                cookie = f"{cookie} Max-Age={max_age};"
-            elif not expires is None:
-                cookie = f"{cookie} Expires={expires};"
-
-            self.__set_cookies = f"{self.__set_cookies}Set-Cookie: {cookie}\n"
+            self.__set_cookies += cookie_.format(key=key, val=val)
         
         self.__set_cookies.rstrip("\n")
 
