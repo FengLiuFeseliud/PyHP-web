@@ -88,7 +88,7 @@ asyncio.run(main())
 
 ```python
 <?py
-    from .pyhp import __version__
+    from pyhp import __version__
     
 	# 这里的 print 将向页面输入
     print(f"<h2>PyHP v{__version__}</h2>")
@@ -186,6 +186,46 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 ?>
 ```
 
+## 自定义错误页
+
+想要自定义错误页, 首先需要指定错误页路径 `web_error_page` 参数, `web_error_page` 必须是网站根目录下的相对路径
+
+```python
+import asyncio
+from pyhp import PyHP_Server, Server_Log
+
+Server_Log()
+
+async def main():
+    server = PyHP_Server(
+        web_error_page="./error.pyhtml"
+    )
+    await server.start()
+
+asyncio.run(main())
+```
+
+然后就可以自定义错误页为 `web_error_page` 参数, 错误页会额外获得错误数据
+
+```python
+<h1>自定义错误页</h1>
+
+<?py 
+    """
+    错误页会额外提供 error, error_url 内置变量
+    并且响应行也会被修改
+    """
+    print(
+        f"<p>response: {html.response}</p>",
+        f"<p>response_data: {html.get_response()}</p>",
+        f"<p>error_url: {error_url}</p>",
+        f"<p>error_class_name: {type(error[0]).__name__}</p>",
+        "<p>error_msg: %s</p>" % error[0],
+        f"<p>error: {error}</p>"
+    )
+?>
+```
+
 ## 使用 Cookie
 
 使用 set_cookie 设置 cookie, set_cookie max_age 默认 -1 立刻过期, max_age 为 None 时于客户端被关闭时失效
@@ -234,7 +274,7 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 
 ```python
 <?py
-    from .pyhp import Content_Type, __version__
+    from pyhp import Content_Type, __version__
     import json
 
     # 设置请求头 Content-Type 为 json

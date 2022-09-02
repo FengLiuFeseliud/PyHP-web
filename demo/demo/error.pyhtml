@@ -1,0 +1,16 @@
+<h1>自定义错误页</h1>
+
+<?py 
+    """
+    错误页会额外提供 error, error_url 内置变量
+    并且响应行也会被修改
+    """
+    print(
+        f"<p>response: {html.response}</p>",
+        f"<p>response_data: {html.get_response()}</p>",
+        f"<p>error_url: {error_url}</p>",
+        f"<p>error_class_name: {type(error[0]).__name__}</p>",
+        "<p>error_msg: %s</p>" % error[0],
+        f"<p>error: {error}</p>"
+    )
+?>

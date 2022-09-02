@@ -24,7 +24,7 @@
 </div>
 
 <?py
-    from .pyhp import __version__
+    from pyhp import __version__
 
     print(
         "<p>http_version: %s</p>" % request_path["http_version"],

@@ -1,5 +1,5 @@
 <?py
-    from .pyhp import __version__
+    from pyhp import __version__
     
     print(f"<h2>PyHP v{__version__}</h2>")
 ?>

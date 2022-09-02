@@ -1,5 +1,6 @@
 <?py
-    from .pyhp import Content_Type, __version__
+    from pyhp import __version__
+    from pyhp.constant import Content_Type
     import json
 
     html.header = {

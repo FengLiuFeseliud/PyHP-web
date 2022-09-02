@@ -1,117 +1,77 @@
 import asyncio
+import aiofiles
 import logging
 import os
-import re
 import sys
 from time import time
-from pyhp.tools import full_date
-import aiofiles
-from traceback import extract_tb, format_list
 from typing import Any, Optional, Union
 from threading import Thread
 from urllib import parse
-
-
-__version__ = "1.0.0"
-
-
-# 代码块正则匹配
-Py_Code_Pattern = re.compile(r"<\?py[\w\W]+?\?>")
-
-
-# 响应头
-Http_Response_Header: dict[str, Any] = {
-    "Connection": "keep-alive",
-    "Content-Type": "text/html",
-    "Content-Length": None,
-    "Cache-Control": "no-store",
-    "Date": None,
-    "Server": f"pyhp {__version__}"
-}
-
-
-Error_Response_Body: str = """<h2>{code} {msg}</h2>
-<h3>{type_}: {value}</h3>
-<div>{traceback_}</div>
-
-<hr />
-<h2 style="text-align: center">PyHP</h2>
-"""
-
-
-# 数据类型
-Content_Type: dict[str, str] = {
-    "txt": "text/plain",
-    "html": "text/html",
-    "css": "text/css",
-    "pyhtml": "text/html",
-    "py": "text/html",
-    "bmp": "image/bmp",
-    "png": "image/png",
-    "jpg": "image/jpg",
-    "gif": "image/gif",
-    "ico": "image/ico",
-    "json": "application/json",
-    "xml": "text/xml",
-    "mp3": "audio/mp4",
-    "mp4": "audio/mp4",
-    "flv": "audio/mp4",
-    "avi": "audio/mp4",
-}
-
-
-def _get_response_header(
-    header: dict[str, Any], 
-    response: str, 
-    html_code: Union[str, bytes], 
-    encoding: str,
-    cookies: str = None
-) -> bytes:
-    header["Date"] = full_date()
-    if "charset" not in header["Content-Type"]:
-        header["Content-Type"] += f";charset={encoding}"
-    
-    if header["Content-Length"] is None:
-        header["Content-Length"] = len(html_code)
-    
-    header_str =f"{response}\n"
-    for item in header.items():
-        key, val = item
-        header_str += f"{key}: {val}\n"
-
-    if cookies:
-        header_str += f"{cookies}\n"
-
-    return header_str.encode(encoding)
+from pyhp.constant import *
+from pyhp.tools import full_date, _traceback_to_html, _get_response_header
 
 
 class Py_Html:
+    """
+    PyHP HTML 对象
+    ----------------
+    初始化时将动态生成页面
+
+    html_data:
+        HTML 数据 (str)
+    encoding: 
+        HTML 编码
+    vals:
+        可在 HTML 中 Pythom 代码块使用的数据, 为一个字典\n
+        key 为在代码块时的变量名, val 为变量数据
+    """
 
     def __init__(
         self, 
         html_data: str, 
         encoding: str = "utf-8",
+        response: dict[str, str] = None,
         vals: dict[str, Any] = {}
     ) -> None:
-        self.__ehco_list: list[str] = []
-        self.__html = html_data
-        self.__encoding = encoding
-        self.__set_cookies = ""
         self.__response: dict[str, Union[str, int]] = {
             "http_version": "1.1",
             "code": 200,
             "msg": "OK"
         }
+
+        if not response is None:
+            self.__response.update(response)
+
+        self.__ehco_list: list[str] = []
+        self.__html = html_data
+        self.__encoding = encoding
+        self.__set_cookies = ""
         self.__header: dict[str, Any] = Http_Response_Header.copy()
         self._run_py_code_block(vals)
 
     @staticmethod
     def _get_py_code_block(html_code: str):
-        """获取文件中的 python 代码块"""
+        """获取文件中的代码块"""
         return Py_Code_Pattern.finditer(html_code)
+    
+    @staticmethod
+    def _format_py_code_block(py_code_block: str):
+        """格式化代码块为 exec 可运行代码"""
+        py_code_lines = py_code_block.replace("<?py ", "", 1).replace("<?py", "", 1) \
+            .rstrip("?>").strip("\n").splitlines(True)
+
+        remove_indent = ""
+        for str_ in py_code_lines[0]:
+            if str_ != " ":
+                break
+            remove_indent = f"{remove_indent}{str_}"
+
+        return "".join(
+            py_code.replace(remove_indent, "", 1) for py_code in py_code_lines
+        )
 
     def _run_py_code_block(self, vals: dict[str, Any] = {}):
-        """运行文件中的 python 代码"""
+        """运行文件中的代码块"""
         py_code_block_list = self._get_py_code_block(self.__html)
         # 设置内置方法
         vals["html"] = self
@@ -124,22 +84,18 @@ class Py_Html:
         for py_code_block in py_code_block_list:
             def run_py_code(py_code_block):
                 try:
-                    py_code_block = py_code_block.group() \
-                        .replace("<?py ", "", 1) \
-                        .replace("<?py", "", 1) \
-                        .lstrip("\n") \
-                        .rstrip("\n") \
-                        .rstrip("?>")
-                    """
-                    避免前面解析出的代码产生缩进错误
-                    在解析出的代码前面加上一句需要缩进的语句, 可以解决任何格的缩进问题
-                    """
-                    if py_code_block[0] in [" ", " \n"]:
-                        py_code_block = "if True:\n%s" % py_code_block
-                    
-                    exec(py_code_block, vals, run_py_vals)
+                    exec(
+                        self._format_py_code_block(py_code_block.group()), 
+                        vals, 
+                        run_py_vals
+                    )
                 except Exception:
-                    self.print(PyHP_Server._get_error_response_body("PyHtml", "Error"))
+                    self.print(PyHP_Server._get_error_body(
+                            sys.exc_info(), 
+                            "PyHtml", 
+                            "Error"
+                        )
+                    )
 
             thread = Thread(target=run_py_code, args=(py_code_block, ))
             thread.setDaemon(True)
@@ -191,7 +147,7 @@ class Py_Html:
         return _get_response_header(
             header=self.__header,
             response=self.response,
-            html_code=self.html,
+            body=self.html,
             encoding=self.__encoding,
             cookies=self.__set_cookies
         )
@@ -223,6 +179,24 @@ class Py_Html:
 
 
 class PyHP_Server:
+    """
+    PyHP 轻量服务端
+    --------------
+
+    host: 
+        服务 IP
+    port: 
+        服务端口
+    web_path: 
+        网站根目录, 默认启动服务端文件目录
+
+    web_index:
+        网站主页
+    web_error_page:
+        网站错误页, 默认 None 使用 PyHP 内置错误页
+    encoding:
+        网站编码
+    """
 
     def __init__(
         self,
@@ -230,6 +204,7 @@ class PyHP_Server:
         port: Union[str, int] = 5000,
         web_path: str = "./",
         web_index: str = "index.pyhtml",
+        web_error_page: Optional[str] = None,
         encoding: str = "utf-8"
     ) -> None:
         self._server = None
@@ -237,15 +212,18 @@ class PyHP_Server:
         self._port = port
         self._web_path = os.path.abspath(web_path)
         self._web_index = web_index
+        self._web_error_page = web_error_page
         self._encoding = encoding
 
     @staticmethod
     def _get_content_type(file_path: str):
+        """获取数据类型"""
         file_name_list = file_path.rsplit("/", maxsplit=1)[-1].rsplit(".", maxsplit=1)
-        if len(file_name_list) < 2:
+        file_type = file_name_list[-1]
+
+        if len(file_name_list) < 2 or file_type not in Content_Type:
             return "text/html"
         
-        file_type = file_name_list[-1]
         return Content_Type[file_type]
 
     @staticmethod
@@ -268,32 +246,87 @@ class PyHP_Server:
         return b"%b\n%b" % (response_header_data, body)
 
     @staticmethod
-    def _get_error_response_body(
+    def _get_error_body(
+        exc_info: tuple,
         code: Union[str, int] = 500,
-        msg: str = "Server Error",
-        encoding: str = "utf-8"
+        msg: str = "Server Error"
     ):
         """设置错误样式 (没有自定义时使用)"""
-        error, value, traceback_ = sys.exc_info()
+        _, error_value, traceback_ = exc_info
 
-        traceback_data = ""
-        for format_ in format_list(extract_tb(traceback_)):
-            format_list_ = format_.split("\n")
-            for msg_ in format_list_:
-                msg_ = msg_.replace("    ", "&nbsp;&nbsp;&nbsp;&nbsp;")
-                traceback_data = f"{traceback_data}<p>{msg_}</p>\n"
+        return Error_Response_Body.format(
+            code = code,
+            msg = msg,
+            type_ = type(error_value).__name__,
+            value = error_value,
+            traceback_ = _traceback_to_html(traceback_)
+        )
+    
+    def _run_html_py_code(
+        self, 
+        html: str, 
+        path: str, 
+        request: dict[str, Any], 
+        response: dict[str, Any] = None,
+        expand_vals: dict[str, Any] = None
+    ) -> tuple[int, bytes]:
+        """动态生成页面"""
+        if expand_vals is None:
+            expand_vals = {}
 
-        return PyHP_Server._get_response_body(
-            body=Error_Response_Body.format(
-                code = code,
-                msg = msg,
-                type_ = error.__name__,
-                value = value,
-                traceback_ = traceback_data
-            ).encode(encoding),
+        vals = {
+            "request": request,
+            "request_header": request["request_header"],
+            "request_path": request["request_path"],
+            "request_data": request["request_data"],
+            "url": f"'{path}'",
+            "post": request["request_data"]["POST"],
+            "get": request["request_data"]["GET"],
+            "cookie": request["cookie"]
+        }
+        vals.update(expand_vals)
+        pyhtml = Py_Html(html, self._encoding, response, vals)
+
+        return pyhtml.get_response()["code"], pyhtml.get_response_body()
+
+    async def _get_error_response_body(
+        self,
+        request: dict[str, Any],
+        code: Union[str, int] = 500,
+        msg: str = "Server Error",
+    ):
+        """设置错误响应"""
+        error, error_value, traceback_ = sys.exc_info()
+        try:
+            # 自定义错误页
+            self._web_error_page_path = f"{self._web_path}/{self._web_error_page}"
+            async with aiofiles.open(self._web_error_page_path, "r") as _file:
+                html = await _file.read()
+
+            return self._run_html_py_code(
+                html,
+                f"/{self._web_error_page}",
+                request,
+                response={
+                    "code": code,
+                    "msg": msg
+                },
+                expand_vals={
+                    "error": (error_value, _traceback_to_html(traceback_)),
+                    "error_url": request["url"],
+                }
+            )
+        except Exception:
+            # 如果自定义错误页执行失败, 重新启用内置错误页
+            body = PyHP_Server._get_error_body(
+                (error, error_value, traceback_), code, msg
+            ).encode(self._encoding)
+
+        return code, PyHP_Server._get_response_body(
+            body=body,
             code=code,
             msg=msg,
-            encoding=encoding
+            encoding=self._encoding
         )
 
     def _set_request(self, request_body: bytes):
@@ -341,75 +374,65 @@ class PyHP_Server:
         return {
             "request_path": {
                 "mode": request_path[0],
-                "path": request_path[1],
+                "path": request_path[1].rsplit("?", maxsplit=1)[0],
                 "http_version": request_path[2],
             },
             "request_header": request,
             "request_data": data,
+            "url": request_path[1],
             "cookie": cookie
         }
     
     async def _get_connected_body(self, request: dict[str, dict[str, Any]]):
         """获取响应该次客户端请求的数据, request 为 _set_request 返回值"""
-        try:
-            path = request["request_path"]["path"]
-            request["request_path"]["path"] = path.rsplit("?", maxsplit=1)[0]
+        file_path = self._web_path + request["request_path"]["path"]
+        if request["request_path"]["path"] == "/":
+            file_path += self._web_index
+        
+        # 解析文件
+        body = b""
+        async with aiofiles.open(file_path, "rb") as _file:
+            content_type = self._get_content_type(file_path)
+            body = await _file.read()
             
-            file_path = self._web_path + request["request_path"]["path"]
-            if request["request_path"]["path"] == "/":
-                file_path += self._web_index
-            
-            # 解析文件
-            body = b""
-            async with aiofiles.open(file_path, "rb") as _file:
-                content_type = self._get_content_type(file_path)
-                body = await _file.read()
-                
-                if content_type == "text/html":
-                    pyhtml = Py_Html(body.decode(self._encoding), self._encoding,{
-                        "request": request,
-                        "request_header": request["request_header"],
-                        "request_path": request["request_path"],
-                        "request_data": request["request_data"],
-                        "url": f"'{path}'",
-                        "post": request["request_data"]["POST"],
-                        "get": request["request_data"]["GET"],
-                        "cookie": request["cookie"]
-                    })
-
-                    body = pyhtml.get_response_body()
-                    code = pyhtml.get_response()["code"]
-                else:
-                    body = self._get_response_body(
-                        body, 
-                        encoding=self._encoding, 
-                        type_=content_type
-                    )
-
-        except FileNotFoundError:
-            body = self._get_error_response_body(404, "Not Found", encoding=self._encoding)
-            code = 404
+            if content_type == "text/html":
+                code, body = self._run_html_py_code(
+                    body.decode(self._encoding), str(request["url"]), request
+                )
+            else:
+                body = self._get_response_body(
+                    body, 
+                    encoding=self._encoding, 
+                    type_=content_type
+                )
+                code = 200
 
         return code, body
 
     async def _client_connected(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter): 
         """处理请求"""
+        body = b""
         try:
             request = self._set_request(await reader.read(2000))
-            code, body = await self._get_connected_body(request)
-
-            logging.debug(body)
-            writer.write(body)
-        except Exception:
-            request = {}
-            writer.write(self._get_error_response_body(encoding=self._encoding))
-            code = 500
-        
-        await writer.drain()
-        writer.close()
-
-        if not request:
+        except IndexError:
             return
+        except Exception as err:
+            logging.error("无法解析请求")
+            logging.exception(err)
+            return
+
+        try:
+            code, body = await self._get_connected_body(request)
+        except FileNotFoundError:
+            code, body = await self._get_error_response_body(request, 404, "Not Found")
+        except Exception:
+            code, body = await self._get_error_response_body(request)
+        finally:
+            logging.debug(body)
+
+            writer.write(body)
+            await writer.drain()
+            writer.close()
 
         logging.info('- - %s - "%s %s" %s - %s' % (
             f"{self._host}:{self._port}",
@@ -426,6 +449,8 @@ class PyHP_Server:
             host = self._host,
             port = self._port
         )
+
+        from pyhp.constant import __version__
 
         addr = self._server.sockets[0].getsockname()
         file_name = sys.argv[0].rsplit("/", maxsplit=1)[-1]
