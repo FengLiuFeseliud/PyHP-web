@@ -188,7 +188,7 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 
 ## 自定义错误页
 
-想要自定义错误页, 首先需要指定错误页路径 `web_error_page` 参数, `web_error_page` 必须是网站根目录下的相对路径
+想要自定义错误页, 首先需要指定错误页名称 `web_error_page` 参数, 错误页必须在网站根目录下
 
 ```python
 import asyncio
@@ -198,7 +198,7 @@ Server_Log()
 
 async def main():
     server = PyHP_Server(
-        web_error_page="./error.pyhtml"
+        web_error_page="error.pyhtml"
     )
     await server.start()
 
