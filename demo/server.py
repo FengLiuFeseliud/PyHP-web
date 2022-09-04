@@ -1,5 +1,4 @@
-from pyhp import PyHP_Server, Server_Log
-import asyncio
+from pyhp import PyHP_Server
 
 """
 测试 server
@@ -8,13 +7,6 @@ import asyncio
 查看 demo
 """
 
-Server_Log()
-
-async def main():
-    server = PyHP_Server(
-        host="127.0.0.1",
-        web_path="./demo"
-    )
-    await server.start()
-
-asyncio.run(main())
+PyHP_Server(
+    web_path="./demo"
+).start()

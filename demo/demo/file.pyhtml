@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+
+<form action="", method="post" enctype="multipart/form-data">
+    <div>
+        <input type="file" name="file" id="img" accept="image/*">
+    </div>
+    <div>
+        <input type="submit" value="ok">
+    </div>
+</form>

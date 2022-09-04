@@ -1,8 +1,10 @@
 # PyHP-web
 
-一种 Python 异步 Web 服务端，在请求页面时后端执行 Html 文件中的 Python 代码动态生成页面
+一种 Python 轻量异步 Web 服务端 (原生异步 socket 实现)，在请求页面时后端执行 Html 文件中的 Python 代码动态生成页面
 
-![](https://img.sakuratools.top/docs/pyhp/pyhp0.png@0x0x0.5x80)
+可以在 Html 文件中使用各种 Python 库，非常适合不用处理大量请求的 web 线上工具
+
+![img](https://img.sakuratools.top/docs/pyhp/pyhp0.png@0x0x0.5x80)
 
 ## Demo
 
@@ -55,34 +57,25 @@
 
 客户端请求生成动态页面
 
-![](https://img.sakuratools.top/docs/pyhp/pyhp1.png@0x0x0.8x80)
+![img](https://img.sakuratools.top/docs/pyhp/pyhp1.png@0x0x0.8x80)
 
-![](https://img.sakuratools.top/docs/pyhp/pyhp2.png@0x0x0.8x80)
-
-
+![img](https://img.sakuratools.top/docs/pyhp/pyhp2.png@0x0x0.8x80)
 
 ## 快速入门
 
 使用 PyHP 时需要先启动 PyHP 服务，如下创建一个最简单的服务器文件，运行后启动 PyHP 服务，默认网站根目录为服务器文件所在文件夹
 
 ```python
-import asyncio
-from pyhp import PyHP_Server, Server_Log
+from pyhp import PyHP_Server
 
-Server_Log()
-
-async def main():
-    server = PyHP_Server()
-    await server.start()
-
-asyncio.run(main())
+PyHP_Server().start()
 ```
 
-默认启动后可以访问 http://127.0.0.1:5000/
+默认启动后可以访问 [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 ### 主页
 
-默认启动后主页为网站路径下的 `index.pyhtml` ，在没有主页时访问 http://127.0.0.1:5000/ 会发生 404
+默认启动后主页为网站路径下的 `index.pyhtml` ，在没有主页时访问 [http://127.0.0.1:5000/](http://127.0.0.1:5000/) 会发生 404
 
 简单创建一个主页显示 PyHP 服务已经启动
 
@@ -90,7 +83,7 @@ asyncio.run(main())
 <?py
     from pyhp import __version__
     
-	# 这里的 print 将向页面输入
+    # 这里的 print 将向页面输入
     print(f"<h2>PyHP v{__version__}</h2>")
 ?>
 
@@ -99,7 +92,7 @@ asyncio.run(main())
 
 效果
 
-![](https://img.sakuratools.top/docs/pyhp/pyhp3.png@0x0x0.8x80)
+![img](https://img.sakuratools.top/docs/pyhp/pyhp3.png@0x0x0.8x80)
 
 ### 代码块
 
@@ -148,6 +141,25 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 
 ```
 
+## 非阻塞生成页面
+
+PyHP 如果一个页面生成在执行 io 操作不会影响其他页面
+
+```python
+<?py 
+    """
+    pyhp 在执行页面生成时不会阻塞其他页面
+
+    注意 页面不要写永远阻塞的代码
+    请求永远阻塞代码数量一多将会导致服务器卡死 (都去执行永远阻塞的代码了)
+    """
+    import time
+    # 模拟 io 操作, 这时候可以去看看别的页面是否会被影响
+    time.sleep(30)
+    print("ok")
+?>
+```
+
 ## 超级全局变量
 
 超级全局变量为 PyHP 定义的变量，在代码块的所有作用域中都可用
@@ -191,18 +203,11 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 想要自定义错误页, 首先需要指定错误页名称 `web_error_page` 参数, 错误页必须在网站根目录下
 
 ```python
-import asyncio
-from pyhp import PyHP_Server, Server_Log
+from pyhp import PyHP_Server
 
-Server_Log()
-
-async def main():
-    server = PyHP_Server(
-        web_error_page="error.pyhtml"
-    )
-    await server.start()
-
-asyncio.run(main())
+PyHP_Server(
+    web_error_page="error.pyhtml"
+).start()
 ```
 
 然后就可以自定义错误页为 `web_error_page` 参数, 错误页会额外获得错误数据

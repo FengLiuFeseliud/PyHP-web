@@ -10,6 +10,13 @@ __version__ = "1.0.0"
 Py_Code_Pattern = re.compile(r"<\?py[\w\W]+?\?>")
 
 
+Header_Data_Pattern = {
+    "boundary": re.compile(r'(?<=boundary=)[^;]*'),
+    "name": re.compile(r'(?<=name=["])[^";]*'),
+    "filename": re.compile(r'(?<=filename=["])[^";]*'),
+}
+
+
 # 响应头
 Http_Response_Header: dict[str, Any] = {
     "Connection": "keep-alive",

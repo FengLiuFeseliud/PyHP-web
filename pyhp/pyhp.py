@@ -1,4 +1,5 @@
 import asyncio
+import platform
 import aiofiles
 import logging
 import os
@@ -6,8 +7,9 @@ import sys
 from time import time
 from typing import Any, Optional, Union
 from threading import Thread
-from urllib import parse
+from pyhp.client import Request
 from pyhp.constant import *
+from pyhp.log import Server_Log
 from pyhp.tools import full_date, _traceback_to_html, _get_response_header
 
 
@@ -189,13 +191,14 @@ class PyHP_Server:
         服务端口
     web_path: 
         网站根目录, 默认启动服务端文件目录
-
     web_index:
         网站主页
     web_error_page:
         网站错误页, 默认 None 使用 PyHP 内置错误页
     encoding:
         网站编码
+    debug:
+        是否开启 debug 日志输出
     """
 
     def __init__(
@@ -205,14 +208,32 @@ class PyHP_Server:
         web_path: str = "./",
         web_index: str = "index.pyhtml",
         web_error_page: Optional[str] = None,
-        encoding: str = "utf-8"
+        request_body_max_size: int = 20480,
+        request_header_max_size: int = 2048,
+        encoding: str = "utf-8",
+        debug: bool = False
     ) -> None:
+        # 如果可以使用 uvloop 则使用
+        try:
+            import uvloop
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy()) 
+            self.__use_uvloop_in = True
+        except ModuleNotFoundError:
+            self.__use_uvloop_in = False
+            if platform.system().lower() == "linux":
+                print("\n * Your system is for Linux It is recommended to install uvloop (pip install uvloop) for better performance")
+
+        # 设置日志输出
+        Server_Log(logging.INFO if not debug else logging.DEBUG)
+
         self._server = None
         self._host = host
         self._port = port
         self._web_path = os.path.abspath(web_path)
         self._web_index = web_index
         self._web_error_page = web_error_page
+        self._request_body_max_size = request_body_max_size * 1024
+        self._request_header_max_size = request_header_max_size * 1024
         self._encoding = encoding
 
     @staticmethod
@@ -269,7 +290,7 @@ class PyHP_Server:
         request: dict[str, Any], 
         response: dict[str, Any] = None,
         expand_vals: dict[str, Any] = None
-    ) -> tuple[int, bytes]:
+    ) -> tuple[Union[str, int], bytes]:
         """动态生成页面"""
         if expand_vals is None:
             expand_vals = {}
@@ -280,8 +301,9 @@ class PyHP_Server:
             "request_path": request["request_path"],
             "request_data": request["request_data"],
             "url": f"'{path}'",
-            "post": request["request_data"]["POST"],
             "get": request["request_data"]["GET"],
+            "post": request["request_data"]["POST"],
+            "files": request["request_data"]["Files"],
             "cookie": request["cookie"]
         }
         vals.update(expand_vals)
@@ -291,9 +313,9 @@ class PyHP_Server:
 
     async def _get_error_response_body(
         self,
-        request: dict[str, Any],
+        request,
         code: Union[str, int] = 500,
-        msg: str = "Server Error",
+        msg: str = "Internal Server Error",
     ):
         """设置错误响应"""
         error, error_value, traceback_ = sys.exc_info()
@@ -303,10 +325,10 @@ class PyHP_Server:
             async with aiofiles.open(self._web_error_page_path, "r") as _file:
                 html = await _file.read()
 
-            return self._run_html_py_code(
-                html,
-                f"/{self._web_error_page}",
-                request,
+            return await asyncio.to_thread(self._run_html_py_code,
+                html=html,
+                path=f"/{self._web_error_page}",
+                request=request,
                 response={
                     "code": code,
                     "msg": msg
@@ -328,60 +350,6 @@ class PyHP_Server:
             msg=msg,
             encoding=self._encoding
         )
-
-    def _set_request(self, request_body: bytes):
-        """解析客户端请求"""
-        request_data = request_body.decode(self._encoding).replace("\r", "").rstrip("\n").split("\n")
-
-        request: dict[str, Any] = {} 
-        data: dict[str, dict[str, Any]] = {
-            "GET": {},
-            "POST": {}
-        }
-
-        request_path = request_data[0].split(" ")
-        # 分解 get 数据
-        url_data = request_path[1].rsplit("?", maxsplit=1)
-        if len(url_data) == 2 and url_data[-1]:
-            for data_item in url_data[-1].split("&"):
-                item = parse.unquote(data_item).split("=")
-                data["GET"][item[0]] = item[1]
-
-        try:
-            # 分解请求头数据
-            for text in request_data[1:]:
-                key = text.split(": ")
-                request[key[0]] = key[1]
-
-        except IndexError:
-            # 分解 post 数据
-            if request_data[-1] != "":
-                for data_item in parse.unquote(request_data[-1].replace("+", " ")).split("&"):
-                    item = data_item.split("=")
-                    data["POST"][item[0]] = item[1]
-
-        # if "multipart/form-data" in request["Content-Type"]:
-        #     web_kit: str = request["Content-Type"].split("; boundary=", maxsplit=1)[-1]
-        #     print(request_body.split())
-        
-        cookie = {}
-        # 分解 cookie 数据
-        if "Cookie" in request:
-            for cookie_key in request["Cookie"].split("; "):
-                cookie_key = cookie_key.split("=")
-                cookie[cookie_key[0]] = cookie_key[1]
-
-        return {
-            "request_path": {
-                "mode": request_path[0],
-                "path": request_path[1].rsplit("?", maxsplit=1)[0],
-                "http_version": request_path[2],
-            },
-            "request_header": request,
-            "request_data": data,
-            "url": request_path[1],
-            "cookie": cookie
-        }
     
     async def _get_connected_body(self, request: dict[str, dict[str, Any]]):
         """获取响应该次客户端请求的数据, request 为 _set_request 返回值"""
@@ -396,7 +364,7 @@ class PyHP_Server:
             body = await _file.read()
             
             if content_type == "text/html":
-                code, body = self._run_html_py_code(
+                code, body = await asyncio.to_thread(self._run_html_py_code,
                     body.decode(self._encoding), str(request["url"]), request
                 )
             else:
@@ -413,16 +381,15 @@ class PyHP_Server:
         """处理请求"""
         body = b""
         try:
-            request = self._set_request(await reader.read(2000))
-        except IndexError:
-            return
-        except Exception as err:
-            logging.error("无法解析请求")
-            logging.exception(err)
-            return
+            request = await Request(reader, self).request
 
-        try:
-            code, body = await self._get_connected_body(request)
+            if type(request) == dict:
+                code, body = await self._get_connected_body(request)
+            elif type(request) == tuple:
+                code, body, request = request
+
+        except PermissionError:
+            code, body = await self._get_error_response_body(request, 403, "Forbidden")
         except FileNotFoundError:
             code, body = await self._get_error_response_body(request, 404, "Not Found")
         except Exception:
@@ -434,21 +401,31 @@ class PyHP_Server:
             await writer.drain()
             writer.close()
 
-        logging.info('- - %s - "%s %s" %s - %s' % (
-            f"{self._host}:{self._port}",
-            request["request_path"]["mode"],
-            request["request_path"]["http_version"],
-            code,
-            request["request_path"]["path"],
-        ))
+        try:
+            if type(request) == dict:
+                logging.info('- - %s - "%s %s" %s - %s' % (
+                    f"{self._host}:{self._port}",
+                    request["request_path"]["mode"],
+                    request["request_path"]["http_version"],
+                    code,
+                    request["request_path"]["path"],
+                ))
+        except KeyError:
+            print(request)
 
-    async def start(self):
+    def start(self):
         """启动服务器"""
-        self._server = await asyncio.start_server(
-            self._client_connected,
-            host = self._host,
-            port = self._port
-        )
+        loop = asyncio.get_event_loop()
+        try:
+            self._server = loop.run_until_complete(asyncio.start_server(
+                self._client_connected,
+                host = self._host,
+                port = self._port,
+                loop=loop
+            ))
+        except Exception as err:
+            print(f"* The Server Failed To Start: {err}")
+            return
 
         from pyhp.constant import __version__
 
@@ -458,9 +435,17 @@ class PyHP_Server:
             f"\n * Serving PyPH {__version__} Server '{file_name}' on ip: {addr[0]} port: {addr[1]}\n\n",
             f"* Website Root Directory '{self._web_path}'\n\n",
             f"* Web Index Page '{self._web_index}' Encoding {self._encoding}\n\n",
-            "* Logging DEBUG %s \n\n" % (logging.DEBUG == logging.root.level),
+            "* DEBUG Mode %s \n\n" % (logging.DEBUG == logging.root.level),
+            "* Used uvloop %s \n\n" % self.__use_uvloop_in,
             f'* Running on http://{addr[0]}:{addr[1]} (Press CTRL+C to quit)\n'
         )
+        del self.__use_uvloop_in
 
-        async with self._server:
-            await self._server.serve_forever()
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            print("\n\n\r* PyPH Server Down")
+        finally:
+            self._server.close()
+            loop.run_until_complete(self._server.wait_closed())
+            loop.close()

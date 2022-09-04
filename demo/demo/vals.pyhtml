@@ -33,6 +33,7 @@
         "<p>url: %s</p>" % url,
         f"<p>get: {get}</p>",
         f"<p>post: {post}</p>",
+        f"<p>files: {files}</p>",
         f"<p>cookie: {cookie}</p>",
         f"<p>request_header: {request_header}</p>",
         f"<p>request_data: {request_data}</p>",
