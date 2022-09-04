@@ -270,7 +270,7 @@ PyHP_Server(
         print("<h1>删除所有 cookie </h1>")
 
     else:
-        print("<h1>cookie str: %s</h1>" % request_header["Cookie"])
+        print("<h1>cookie str: %s</h1>" % request_header["cookie"])
         print("<h1>cookie: %s</h1>" % cookie)
 ?>
 ```

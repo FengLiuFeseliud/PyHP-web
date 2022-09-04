@@ -411,7 +411,7 @@ class PyHP_Server:
                     request["request_path"]["path"],
                 ))
         except KeyError:
-            print(request)
+            pass
 
     def start(self):
         """启动服务器"""
