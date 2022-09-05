@@ -63,7 +63,7 @@
 
 ## 快速入门
 
-使用 PyHP 时需要先启动 PyHP 服务，如下创建一个最简单的服务器文件，运行后启动 PyHP 服务，默认网站根目录为服务器文件所在文件夹
+使用 PyHP 时需要先启动 PyHP 服务，如下创建一个最简单的服务器文件，运行后启动 PyHP 服务，默认网站根目录为服务器文件所在文件夹，如果 Linux 下有安装 uvloop PyHP 将自动启用
 
 ```python
 from pyhp import PyHP_Server
@@ -100,7 +100,7 @@ PyHP 在 html 页面中的任何地方都可以执行 Python 代码只需要使�
 
 前面代码块中定义的变量，在后面的代码块都可以使用，但是前面代码块引用的模块，在后面的代码块不可以使用
 
-代码块 `print` 会向页面输出，代码块 `print` 的数据将在这块代码块执行完后，替换这块代码块 （代码块在哪个元素中 `print` 的数据就会在哪个元素中）
+代码块 `print` 会向页面输出，代码块 `print` 的数据将在这块代码块执行完后，替换这块代码块 （代码块在哪个元素中 `print` 的数据就会在哪个元素中，如果需要直接输出请求数据使用 `html_encode` 可以防止 xss 攻击 ,`from pyhp.tools import html_encode` 引用 `html_encode`
 
 ```python
 <!DOCTYPE html>
@@ -168,9 +168,13 @@ PyHP 如果一个页面生成在执行 io 操作不会影响其他页面
 
 > **`html`**：当前代码块所在的 Py_Html 对象
 >
+> **`html.header`**：页面响应头, 设置响应头html.header = {"响应类型": 值}
+>
+> **`html.response`**：页面响应行, 设置响应行 html.response = {"响应类型": 值}, 响应类型: code: 响应码, msg: 响应内容, http_version: http 版本
+>
 > **`request_header`**：请求头
 >
-> **`request_path`**：请求才模式 / 请求路径  /  请求 HTTP 版本
+> **`request_path`**：请求模式 / 请求路径  /  请求 HTTP 版本
 >
 > **`url`**：请求 URL
 >
@@ -184,18 +188,25 @@ PyHP 如果一个页面生成在执行 io 操作不会影响其他页面
 
 ```python
 <?py
-    html_text = str(html).strip("<").rstrip(">")
+    from pyhp import __version__
+    from pyhp.tools import html_encode
 
     print(
-        f"<p>html: {html_text}</p>",
-        f"<p>request_header: {request_header}</p>",
-        f"<p>request_path: {request_path}</p>",
-        f"<p>url: {url}</p>",
-        f"<p>post: {post}</p>",
+        html_encode(str(html)),
+        "<hr>\n<p>请求参数</p>",
+        "<p>request_path: %s</p>" % request_path,
+        "<p>url: %s</p>" % url,
         f"<p>get: {get}</p>",
-        f"<p>cookie: {cookie}</p>"
-    ) 
-?>
+        f"<p>post: {post}</p>",
+        f"<p>cookie: {cookie}</p>",
+        "<hr>\n<p>请求头</p>",
+        f"<p>request_header: {request_header}</p>",
+        "<hr>\n<p>响应头</p>",
+        f"<p>response: {html.response}</p>",
+        f"<p>header: {html.header}</p>",
+        "<hr>",
+        f"<p>PyHP version {__version__}</p>"
+    )
 ```
 
 ## 自定义错误页

@@ -34,4 +34,3 @@
     else:
         print("<h1>cookie str: %s</h1>" % request_header["cookie"])
         print("<h1>cookie: %s</h1>" % cookie)
-?>

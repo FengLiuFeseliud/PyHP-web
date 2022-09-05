@@ -21,4 +21,3 @@
     }
 
     print(json.dumps(data))
-?>

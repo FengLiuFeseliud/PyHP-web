@@ -141,43 +141,43 @@ class Py_Html:
         self.__set_cookies.rstrip("\n")
 
     @property
-    def html(self) -> Union[str, bytes]:
+    def html(self) -> bytes:
         return self.__html.encode(self.__encoding)
 
     @property
-    def header(self) -> bytes:
-        return _get_response_header(
-            header=self.__header,
-            response=self.response,
-            body=self.html,
-            encoding=self.__encoding,
-            cookies=self.__set_cookies
-        )
+    def header(self) -> dict[str, Union[str, int]]:
+        return self.__header
 
     @header.setter
     def header(self, header: dict[str, Union[str, int]]):
         self.__header.update(header)
 
     @property
-    def response(self):
-        return "HTTP/%s %s %s" % (
-            self.__response["http_version"],
-            self.__response["code"],
-            self.__response["msg"]
-        )
+    def response(self) -> dict[str, Union[str, int]]:
+        return self.__response
 
     @response.setter
     def response(self, response: dict[str, Union[str, int]]):
         self.__response.update(response)
 
     def get_response(self):
-        return self.__response
+        return "HTTP/%s %s %s" % (
+            self.__response["http_version"],
+            self.__response["code"],
+            self.__response["msg"]
+        )
 
-    def get_header(self):
-        return self.__header
+    def get_header(self) -> bytes:
+        return _get_response_header(
+            header=self.__header,
+            response=self.get_response(),
+            body=self.html,
+            encoding=self.__encoding,
+            cookies=self.__set_cookies
+        )
 
-    def get_response_body(self):
-        return b"%b\n%b" % (self.header, self.html)
+    def get_response_body(self) -> bytes:
+        return b"%b\n%b" % (self.get_header(), self.html)
 
 
 class PyHP_Server:
@@ -309,7 +309,7 @@ class PyHP_Server:
         vals.update(expand_vals)
         pyhtml = Py_Html(html, self._encoding, response, vals)
 
-        return pyhtml.get_response()["code"], pyhtml.get_response_body()
+        return pyhtml.response["code"], pyhtml.get_response_body()
 
     async def _get_error_response_body(
         self,
@@ -432,11 +432,10 @@ class PyHP_Server:
         addr = self._server.sockets[0].getsockname()
         file_name = sys.argv[0].rsplit("/", maxsplit=1)[-1]
         print(
-            f"\n * Serving PyPH {__version__} Server '{file_name}' on ip: {addr[0]} port: {addr[1]}\n\n",
+            f"\n * Serving PyHP {__version__}, Server '{file_name}' on ip: {addr[0]} port: {addr[1]}\n\n",
             f"* Website Root Directory '{self._web_path}'\n\n",
-            f"* Web Index Page '{self._web_index}' Encoding {self._encoding}\n\n",
-            "* DEBUG Mode %s \n\n" % (logging.DEBUG == logging.root.level),
-            "* Used uvloop %s \n\n" % self.__use_uvloop_in,
+            f"* Web Index Page '{self._web_index}', Web Error Page '{self._web_error_page}', Encoding {self._encoding}\n\n",
+            "* DEBUG Mode %s, Used uvloop %s\n\n" % (logging.DEBUG == logging.root.level, self.__use_uvloop_in),
             f'* Running on http://{addr[0]}:{addr[1]} (Press CTRL+C to quit)\n'
         )
         del self.__use_uvloop_in
@@ -444,7 +443,7 @@ class PyHP_Server:
         try:
             loop.run_forever()
         except KeyboardInterrupt:
-            print("\n\n\r* PyPH Server Down")
+            print("\n\n\r* PyHP Server Down")
         finally:
             self._server.close()
             loop.run_until_complete(self._server.wait_closed())

@@ -27,16 +27,19 @@
     from pyhp import __version__
 
     print(
-        "<p>http_version: %s</p>" % request_path["http_version"],
-        "<p>request_mode: %s</p>" % request_path["mode"],
-        "<p>request_path: %s</p>" % request_path["path"],
+        "<hr>\n<p>请求参数</p>",
+        "<p>request_path: %s</p>" % request_path,
         "<p>url: %s</p>" % url,
         f"<p>get: {get}</p>",
         f"<p>post: {post}</p>",
         f"<p>files: {files}</p>",
         f"<p>cookie: {cookie}</p>",
+        "<hr>\n<p>请求头</p>",
         f"<p>request_header: {request_header}</p>",
         f"<p>request_data: {request_data}</p>",
+        "<hr>\n<p>响应头</p>",
+        f"<p>response: {html.response}</p>",
+        f"<p>header:{html.header}</p>",
+        "<hr>",
         f"<p>PyHP version {__version__}</p>"
-    ) 
-?>
+    )

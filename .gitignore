@@ -3,3 +3,7 @@
 /server.py
 /*/__pycache__
 /logs
+/.eggs
+/dist
+/pyhp_web.egg-info
+/pyhp.egg-info

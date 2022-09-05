@@ -3,11 +3,26 @@ from typing import Any
 
 
 # 版本号
-__version__ = "1.0.0"
+__version__ = "0.1.0"
 
 
-# 代码块正则匹配
-Py_Code_Pattern = re.compile(r"<\?py[\w\W]+?\?>")
+"""
+代码块正则匹配
+
+<?py
+print("xxxx)
+?>
+
+<?py
+    print("xxxx)
+?>
+
+<?py print("xxxx) ?>
+
+<?py
+    print("xxxx)
+"""
+Py_Code_Pattern = re.compile(r"<\?py[\w\W]+?\?>|<\?py[\w\W]+")
 
 
 Header_Data_Pattern = {
