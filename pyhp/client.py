@@ -73,13 +73,13 @@ class Request:
 
     async def _get_form_urlencoded_data(self):
         """解析 application/x-www-form-urlencoded 表单请求格式的数据"""
-        data = await self._reader.read(2000)
+        data = await self._reader.read(self._server._request_body_max_size)
         request_form_data = data.decode(self._encoding)
 
         form_data = {}
-        for data_item in parse.unquote(request_form_data.replace("+", " ")).split("&"):
+        for data_item in request_form_data.replace("+", " ").split("&"):
             item = data_item.split("=")
-            form_data[item[0]] = item[1]
+            form_data[item[0]] = parse.unquote(item[1])
         
         return form_data
 

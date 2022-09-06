@@ -10,7 +10,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="pyhp",
-    version="0.1.0",
+    version="0.1.1",
     description="Web 服务端，在请求页面时后端执行 Html 文件中的 Python 代码生成动态网页 （类似 PHP）",
     keywords=[
         "web",
