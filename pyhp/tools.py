@@ -3,6 +3,33 @@ from traceback import extract_tb, format_list
 from typing import Any, Union
 
 
+def _get_include_path(html_path: str, include_path: str):
+    """将以包含该 include_path 的页面下的包含页面路径转换为在当前 server 下可以找到包含页面的路径\n
+    html_path: 包含该 include_path 的页面路径\n
+    include_path: 包含页面路径"""
+    html_path.rstrip("/").rstrip("\\")
+    if "../" == include_path[0:3]:
+        add_path = html_path.rsplit("/", maxsplit=1)[0]
+        while True:
+            if "../" != include_path[0:3]:
+                break
+
+            include_path = include_path[3:]
+            add_path = add_path.rsplit("/", maxsplit=1)[0]
+        include_file_path = f"{add_path}/{include_path}"
+
+    elif "/" == include_path[0]:
+        include_file_path = include_path
+    
+    else:
+        if "./" == include_path[0:2]:
+            include_path = include_path[2:]
+        add_path = html_path.rsplit("/", maxsplit=1)[0]
+        include_file_path = f"{add_path}/{include_path}"
+
+    return include_file_path
+
+
 def _traceback_to_html(traceback_):
     """错误回溯转 HTML 数据"""
     traceback_data = ""
@@ -58,27 +85,3 @@ def html_encode(str_: str) -> str:
     str_ = str_.replace("'", "&#39;")
     str_ = str_.replace('"', "&quot;")
     return str_.replace("\n", "<br>")
-
-
-def _get_include_path(html_path: str, include_path: str):
-    html_path.rstrip("/").rstrip("\\")
-    if "../" == include_path[0:3]:
-        add_path = html_path.rsplit("/", maxsplit=1)[0]
-        while True:
-            if "../" != include_path[0:3]:
-                break
-
-            include_path = include_path[3:]
-            add_path = add_path.rsplit("/", maxsplit=1)[0]
-        include_file_path = f"{add_path}/{include_path}"
-
-    elif "/" == include_path[0]:
-        include_file_path = include_path
-    
-    else:
-        if "./" == include_path[0:2]:
-            include_path = include_path[2:]
-        add_path = html_path.rsplit("/", maxsplit=1)[0]
-        include_file_path = f"{add_path}/{include_path}"
-
-    return include_file_path

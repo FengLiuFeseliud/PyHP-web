@@ -22,11 +22,18 @@ class Py_Html:
 
     html_data:
         HTML 数据 (str)
+    html_path:
+        HTML 文件路径 (用于处理代码块中的相对路径)
     encoding: 
         HTML 编码
+    response:
+        响应行
     vals:
         可在 HTML 中 Pythom 代码块使用的数据, 为一个字典\n
         key 为在代码块时的变量名, val 为变量数据
+    include_run_py_vals:
+        包含该 PyHP HTML 对象的页面的已经运行代码块的变量\n
+        存在时在该页面可以获取包含该 PyHP HTML 对象的页面的变量
     """
 
     def __init__(
@@ -150,13 +157,16 @@ class Py_Html:
         self._set_cookies.rstrip("\n")
     
     def include(self, pyhtm_path: str, update_header: bool = False):
+        """包含页面"""
         try:
+            # 处理页面
             include_file_path = _get_include_path(self.__html_path, pyhtm_path)
             with open(include_file_path, "r", encoding=self.__encoding) as _file:
                 py_html = Py_Html(
                     _file.read(), include_file_path, self.__encoding, self.__response.copy(), self._vals.copy(), self._run_py_vals.copy()
                 )
 
+            # 更新包含它的页面数据
             if update_header:
                 self.__response.update(py_html.response)
                 self.__header.update(py_html.header)
