@@ -58,3 +58,27 @@ def html_encode(str_: str) -> str:
     str_ = str_.replace("'", "&#39;")
     str_ = str_.replace('"', "&quot;")
     return str_.replace("\n", "<br>")
+
+
+def _get_include_path(html_path: str, include_path: str):
+    html_path.rstrip("/").rstrip("\\")
+    if "../" == include_path[0:3]:
+        add_path = html_path.rsplit("/", maxsplit=1)[0]
+        while True:
+            if "../" != include_path[0:3]:
+                break
+
+            include_path = include_path[3:]
+            add_path = add_path.rsplit("/", maxsplit=1)[0]
+        include_file_path = f"{add_path}/{include_path}"
+
+    elif "/" == include_path[0]:
+        include_file_path = include_path
+    
+    else:
+        if "./" == include_path[0:2]:
+            include_path = include_path[2:]
+        add_path = html_path.rsplit("/", maxsplit=1)[0]
+        include_file_path = f"{add_path}/{include_path}"
+
+    return include_file_path

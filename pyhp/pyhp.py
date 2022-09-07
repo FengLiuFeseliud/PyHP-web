@@ -9,8 +9,9 @@ from typing import Any, Optional, Union
 from threading import Thread
 from pyhp.client import Request
 from pyhp.constant import *
+from pyhp.error import IncludeImportError
 from pyhp.log import Server_Log
-from pyhp.tools import full_date, _traceback_to_html, _get_response_header
+from pyhp.tools import full_date, _traceback_to_html, _get_response_header, _get_include_path
 
 
 class Py_Html:
@@ -31,9 +32,11 @@ class Py_Html:
     def __init__(
         self, 
         html_data: str, 
+        html_path: str, 
         encoding: str = "utf-8",
-        response: dict[str, str] = None,
-        vals: dict[str, Any] = {}
+        response: dict[str, Union[str, int]] = None,
+        vals: dict[str, Any] = {},
+        include_run_py_vals: dict[str, Any] = {},
     ) -> None:
         self.__response: dict[str, Union[str, int]] = {
             "http_version": "1.1",
@@ -45,11 +48,17 @@ class Py_Html:
             self.__response.update(response)
 
         self.__ehco_list: list[str] = []
+        self.__html_path = html_path
         self.__html = html_data
         self.__encoding = encoding
-        self.__set_cookies = ""
         self.__header: dict[str, Any] = Http_Response_Header.copy()
-        self._run_py_code_block(vals)
+        self._vals: dict[str, Any] = vals
+        self._include_run_py_vals: dict[str, Any] = include_run_py_vals
+        # 存储所有已经运行代码块的变量
+        self._run_py_vals: dict[str, Any] = {}
+        self._set_cookies = ""
+        
+        self._run_py_code_block(self._vals)
 
     @staticmethod
     def _get_py_code_block(html_code: str):
@@ -76,20 +85,20 @@ class Py_Html:
         """运行文件中的代码块"""
         py_code_block_list = self._get_py_code_block(self.__html)
         # 设置内置方法
-        vals["html"] = self
-        vals["print"] = self.print
-        vals["set_cookies"] = self.set_cookies
-        vals["__name__"] = __name__
-        # 存储所有已经运行代码块的变量
-        run_py_vals: dict[str, Any] = {}
+        self._vals["html"] = self
+        self._vals["print"] = self.print
+        self._vals["set_cookies"] = self.set_cookies
+        self._vals["include"] = self.include
+        self._vals["__name__"] = __name__
+        self._vals.update(vals)
 
         for py_code_block in py_code_block_list:
             def run_py_code(py_code_block):
                 try:
                     exec(
                         self._format_py_code_block(py_code_block.group()), 
-                        vals, 
-                        run_py_vals
+                        self._vals, 
+                        self._run_py_vals
                     )
                 except Exception:
                     self.print(PyHP_Server._get_error_body(
@@ -136,9 +145,26 @@ class Py_Html:
             cookie_ = "Set-Cookie: {key}={val}%s" % f"; Path={path}; Expires={expires};\n"
         
         for key, val in cookies.items():
-            self.__set_cookies += cookie_.format(key=key, val=val)
+            self._set_cookies += cookie_.format(key=key, val=val)
         
-        self.__set_cookies.rstrip("\n")
+        self._set_cookies.rstrip("\n")
+    
+    def include(self, pyhtm_path: str, update_header: bool = False):
+        try:
+            include_file_path = _get_include_path(self.__html_path, pyhtm_path)
+            with open(include_file_path, "r", encoding=self.__encoding) as _file:
+                py_html = Py_Html(
+                    _file.read(), include_file_path, self.__encoding, self.__response.copy(), self._vals.copy(), self._run_py_vals.copy()
+                )
+
+            if update_header:
+                self.__response.update(py_html.response)
+                self.__header.update(py_html.header)
+            self._run_py_vals.update(py_html._run_py_vals)
+            self._set_cookies = f"{self._set_cookies}\n{py_html._set_cookies}" if self._set_cookies else py_html._set_cookies
+            self.print(f"{py_html.get_html()}\n")
+        except Exception as err:
+            raise IncludeImportError(str(err))
 
     @property
     def html(self) -> bytes:
@@ -159,6 +185,9 @@ class Py_Html:
     @response.setter
     def response(self, response: dict[str, Union[str, int]]):
         self.__response.update(response)
+    
+    def get_html(self):
+        return self.__html
 
     def get_response(self):
         return "HTTP/%s %s %s" % (
@@ -173,7 +202,7 @@ class Py_Html:
             response=self.get_response(),
             body=self.html,
             encoding=self.__encoding,
-            cookies=self.__set_cookies
+            cookies=self._set_cookies
         )
 
     def get_response_body(self) -> bytes:
@@ -287,6 +316,7 @@ class PyHP_Server:
         self, 
         html: str, 
         path: str, 
+        html_path: str,
         request: dict[str, Any], 
         response: dict[str, Any] = None,
         expand_vals: dict[str, Any] = None
@@ -307,7 +337,7 @@ class PyHP_Server:
             "cookie": request["cookie"]
         }
         vals.update(expand_vals)
-        pyhtml = Py_Html(html, self._encoding, response, vals)
+        pyhtml = Py_Html(html, html_path, self._encoding, response, vals)
 
         return pyhtml.response["code"], pyhtml.get_response_body()
 
@@ -320,6 +350,9 @@ class PyHP_Server:
         """设置错误响应"""
         error, error_value, traceback_ = sys.exc_info()
         try:
+            if self._web_error_page is None:
+                raise FileNotFoundError
+
             # 自定义错误页
             self._web_error_page_path = f"{self._web_path}/{self._web_error_page}"
             async with aiofiles.open(self._web_error_page_path, "r") as _file:
@@ -328,6 +361,7 @@ class PyHP_Server:
             return await asyncio.to_thread(self._run_html_py_code,
                 html=html,
                 path=f"/{self._web_error_page}",
+                html_path=self._web_error_page,
                 request=request,
                 response={
                     "code": code,
@@ -365,7 +399,7 @@ class PyHP_Server:
             
             if content_type == "text/html":
                 code, body = await asyncio.to_thread(self._run_html_py_code,
-                    body.decode(self._encoding), str(request["url"]), request
+                    body.decode(self._encoding), str(request["url"]), file_path, request
                 )
             else:
                 body = self._get_response_body(

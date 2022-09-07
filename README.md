@@ -209,6 +209,44 @@ PyHP 如果一个页面生成在执行 io 操作不会影响其他页面
     )
 ```
 
+## include 包含文件
+
+PyHP 中的 `include` 与 PHP 类似, 可以导入页面并执行里面的 Python 代码并把页面写入当前页面
+
+被包含页面执行完后可以更新包含它的文件中的变量与设置的 Cookie, 被包含的页面也可以使用包含它的文件中的变量与响应头与响应行 , `include` `update_header` 为 `True` 时, 被包含可以允许更新包含它的文件的响应头与响应行
+
+`include` 导入页面错误时不会影响后面代码执行
+
+```python
+<?py
+    print("<h1>include cookie.pyhtml </h1>")
+
+    # 相对路径引入
+    include("cookie.pyhtml")
+
+    print("<br><br><h1>include vals.pyhtml </h1>")
+
+    # 相对路径引入 ./
+    include("./vals.pyhtml")
+
+    print("<br><br><h1>include json.pyhtml </h1>")
+
+    # 相对路径引入 ../
+    include("../demo/json.pyhtml")
+    """
+    将更新响应头为 Content-Type: application/json
+    include("../demo/json.pyhtml", update_header=True)
+    """
+
+    print("<br><br><h1>include test.pyhtml </h1>")
+
+    # 绝对路径引入
+    include("/home/sakura/pyhp-web/demo/demo/test.pyhtml")
+?>
+
+<br><br><h1>include end ...</h1>
+```
+
 ## 自定义错误页
 
 想要自定义错误页, 首先需要指定错误页名称 `web_error_page` 参数, 错误页必须在网站根目录下
