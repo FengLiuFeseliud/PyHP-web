@@ -24,7 +24,7 @@
 </div>
 
 <?py
-    from pyhp import __version__
+    from pyhpweb import __version__
 
     print(
         "<hr>\n<p>请求参数</p>",

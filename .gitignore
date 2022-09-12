@@ -5,5 +5,4 @@
 /logs
 /.eggs
 /dist
-/pyhp_web.egg-info
-/pyhp.egg-info
+/pyhpweb.egg-info

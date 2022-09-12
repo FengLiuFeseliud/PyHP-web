@@ -2,11 +2,11 @@ import asyncio, aiofiles
 import os
 from typing import TYPE_CHECKING, Any, Union
 from urllib import parse
-from pyhp.constant import Header_Data_Pattern
+from pyhpweb.constant import Header_Data_Pattern
 
 
 if TYPE_CHECKING:
-    from pyhp import PyHP_Server
+    from pyhpweb import PyHP_Server
 
 
 class Request:

@@ -1,4 +1,4 @@
-from pyhp import PyHP_Server
+from pyhpweb import PyHP_Server
 
 """
 测试 server

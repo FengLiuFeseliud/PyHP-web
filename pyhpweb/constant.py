@@ -59,7 +59,7 @@ Content_Type: dict[str, str] = {
     "html": "text/html",
     "css": "text/css",
     "pyhtml": "text/html",
-    "py": "text/html",
+    "pyh": "text/html",
     "bmp": "image/bmp",
     "png": "image/png",
     "jpg": "image/jpg",

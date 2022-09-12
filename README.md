@@ -6,6 +6,14 @@
 
 ![img](https://img.sakuratools.top/docs/pyhp/pyhp0.png@0x0x0.5x80)
 
+## 安装
+
+pyhp 安装使用 pip
+
+```bash
+pip install pyhpweb
+```
+
 ## Demo
 
 后端代码
@@ -37,7 +45,7 @@
 </div>
 
 <?py
-    from pyhp import __version__
+    from pyhpweb import __version__
 
     print(
         "<p>http_version: %s</p>" % request_path["http_version"],
@@ -66,7 +74,7 @@
 使用 PyHP 时需要先启动 PyHP 服务，如下创建一个最简单的服务器文件，运行后启动 PyHP 服务，默认网站根目录为服务器文件所在文件夹，如果 Linux 下有安装 uvloop PyHP 将自动启用
 
 ```python
-from pyhp import PyHP_Server
+from pyhpweb import PyHP_Server
 
 PyHP_Server().start()
 ```
@@ -75,13 +83,13 @@ PyHP_Server().start()
 
 ### 主页
 
-默认启动后主页为网站路径下的 `index.pyhtml` ，在没有主页时访问 [http://127.0.0.1:5000/](http://127.0.0.1:5000/) 会发生 404
+使用 `.html` `.py` `.pyhtml` `.pyh` 的文件都会被 pyhp 解析，不过还是推荐使用 `.pyhtml` `.pyh`，PyHP 服务默认启动后主页为网站路径下的 `index.pyh` ，在没有主页时访问 [http://127.0.0.1:5000/](http://127.0.0.1:5000/) 会发生 404
 
 简单创建一个主页显示 PyHP 服务已经启动
 
 ```python
 <?py
-    from pyhp import __version__
+    from pyhpweb import __version__
     
     # 这里的 print 将向页面输入
     print(f"<h2>PyHP v{__version__}</h2>")
@@ -188,8 +196,8 @@ PyHP 如果一个页面生成在执行 io 操作不会影响其他页面
 
 ```python
 <?py
-    from pyhp import __version__
-    from pyhp.tools import html_encode
+    from pyhpweb import __version__
+    from pyhpweb.tools import html_encode
 
     print(
         html_encode(str(html)),
@@ -252,7 +260,7 @@ PyHP 中的 `include` 与 PHP 类似, 可以导入页面并执行里面的 Pytho
 想要自定义错误页, 首先需要指定错误页名称 `web_error_page` 参数, 错误页必须在网站根目录下
 
 ```python
-from pyhp import PyHP_Server
+from pyhpweb import PyHP_Server
 
 PyHP_Server(
     web_error_page="error.pyhtml"
@@ -286,7 +294,7 @@ PyHP_Server(
 
 ```python
 <?py
-    from pyhp.tools import full_date
+    from pyhpweb.tools import full_date
     
     if not cookie:
         """
@@ -328,7 +336,7 @@ PyHP_Server(
 
 ```python
 <?py
-    from pyhp import Content_Type, __version__
+    from pyhpweb import Content_Type, __version__
     import json
 
     # 设置请求头 Content-Type 为 json
